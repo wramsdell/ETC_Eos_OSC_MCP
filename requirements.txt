@@ -1,0 +1,17 @@
+# MCP Server Framework
+mcp>=1.0.0
+
+# OSC Communication
+python-osc>=1.8.0
+
+# HTTP client for potential future features
+httpx>=0.24.0
+
+# Input validation
+pydantic>=2.0.0
+
+# Type hints support
+typing-extensions>=4.5.0
+
+# Testing
+pytest>=7.0.0
