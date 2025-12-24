@@ -8,12 +8,12 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 import json
 
-from ..utils.command_builder import (
+from utils.command_builder import (
     build_patch_command,
     build_unpatch_command,
     format_address
 )
-from ..utils.validators import (
+from utils.validators import (
     validate_channel_number,
     validate_dmx_address
 )

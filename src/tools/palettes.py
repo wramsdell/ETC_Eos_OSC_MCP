@@ -8,13 +8,13 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 import json
 
-from ..utils.command_builder import (
+from utils.command_builder import (
     build_palette_record_command,
     build_palette_apply_command,
     build_delete_command,
     build_channel_selection
 )
-from ..utils.validators import (
+from utils.validators import (
     validate_palette_type,
     validate_label,
     validate_channel_number

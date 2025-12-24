@@ -8,14 +8,14 @@ from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, Union
 import json
 
-from ..utils.command_builder import (
+from utils.command_builder import (
     build_cue_record_command,
     build_cue_update_command,
     build_cue_timing_command,
     build_delete_command,
     parse_cue_number
 )
-from ..utils.validators import (
+from utils.validators import (
     validate_cue_number,
     validate_time,
     validate_label

@@ -8,12 +8,12 @@ from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 import json
 
-from ..utils.command_builder import (
+from utils.command_builder import (
     build_effect_command,
     build_delete_command,
     build_channel_selection
 )
-from ..utils.validators import (
+from utils.validators import (
     validate_effect_rate,
     validate_effect_size,
     validate_channel_number

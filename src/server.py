@@ -5,7 +5,19 @@ Main server file that initializes the MCP server and registers all tools.
 """
 
 import os
+import sys
 import logging
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Add src directory to path so imports work correctly
+src_dir = Path(__file__).parent
+if str(src_dir) not in sys.path:
+    sys.path.insert(0, str(src_dir))
+
 from mcp.server.fastmcp import FastMCP
 
 # Import EOS client
@@ -59,7 +71,7 @@ logger.info("✓ Palette tools registered")
 
 logger.info(f"ETC Eos MCP Server initialized successfully")
 logger.info(f"Connected to Eos console at {eos_host}:{eos_port}")
-logger.info(f"Total tools registered: {len(mcp._tools)}")
+# Tools successfully registered (14 total: 4 patch, 5 cue, 2 effect, 3 palette)
 
 # Run the server
 if __name__ == "__main__":
