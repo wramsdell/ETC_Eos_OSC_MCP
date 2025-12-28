@@ -1,6 +1,9 @@
 # MCP Server Framework
 mcp>=1.0.0
 
+# Environment variable management
+python-dotenv>=1.0.0
+
 # OSC Communication
 python-osc>=1.8.0
 

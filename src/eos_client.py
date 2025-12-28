@@ -60,17 +60,109 @@ class EosOSCClient:
     def _setup_receiver(self):
         """Setup OSC server to receive messages from console."""
         self.dispatcher = dispatcher.Dispatcher()
-        # Map common Eos output patterns
+
+        # Map specific Eos output patterns for detailed feedback
+        self.dispatcher.map("/eos/out/notify", self._handle_notify)
+        self.dispatcher.map("/eos/out/error", self._handle_error)
+        self.dispatcher.map("/eos/out/event", self._handle_event)
+        self.dispatcher.map("/eos/out/user/*/action", self._handle_user_action)
+        self.dispatcher.map("/eos/out/user/*/selection", self._handle_selection)
+        self.dispatcher.map("/eos/out/cue/*/*", self._handle_cue_feedback)
+        self.dispatcher.map("/eos/out/patch/*", self._handle_patch_feedback)
+        self.dispatcher.map("/eos/out/dmx/*", self._handle_dmx_feedback)
+        self.dispatcher.map("/eos/out/playback/*", self._handle_playback_feedback)
+
+        # Catch-all for any unmapped messages
         self.dispatcher.map("/eos/out/*", self._handle_eos_output)
+
+        # Storage for feedback data
+        self.feedback_log = []
+        self.operator_actions = []
+        self.max_log_size = 1000  # Keep last 1000 messages
+
         self.server = osc_server.ThreadingOSCUDPServer(
             ("0.0.0.0", self.rx_port),
             self.dispatcher
         )
         logger.info(f"OSC receiver enabled on port {self.rx_port}")
-    
+
+    def _log_feedback(self, category: str, address: str, args: tuple):
+        """Log feedback message with timestamp."""
+        import time
+        entry = {
+            'timestamp': time.time(),
+            'category': category,
+            'address': address,
+            'args': args
+        }
+        self.feedback_log.append(entry)
+
+        # Trim log if too large
+        if len(self.feedback_log) > self.max_log_size:
+            self.feedback_log = self.feedback_log[-self.max_log_size:]
+
+    def _handle_notify(self, address: str, *args):
+        """Handle notification messages from Eos."""
+        logger.info(f"Eos Notify: {args}")
+        self._log_feedback('notify', address, args)
+
+    def _handle_error(self, address: str, *args):
+        """Handle error messages from Eos - important for learning what doesn't work."""
+        logger.warning(f"Eos Error: {args}")
+        self._log_feedback('error', address, args)
+
+    def _handle_event(self, address: str, *args):
+        """Handle system event messages from Eos."""
+        logger.info(f"Eos Event: {args}")
+        self._log_feedback('event', address, args)
+
+    def _handle_user_action(self, address: str, *args):
+        """Handle user action messages - tracks what operators do."""
+        logger.info(f"User Action: {address} = {args}")
+        self._log_feedback('user_action', address, args)
+
+        # Store operator actions separately for behavior learning
+        import time
+        self.operator_actions.append({
+            'timestamp': time.time(),
+            'address': address,
+            'action': args
+        })
+
+        # Trim operator actions log
+        if len(self.operator_actions) > self.max_log_size:
+            self.operator_actions = self.operator_actions[-self.max_log_size:]
+
+    def _handle_selection(self, address: str, *args):
+        """Handle channel selection changes."""
+        logger.debug(f"Selection Changed: {args}")
+        self._log_feedback('selection', address, args)
+
+    def _handle_cue_feedback(self, address: str, *args):
+        """Handle cue state feedback."""
+        logger.debug(f"Cue Feedback: {address} = {args}")
+        self._log_feedback('cue', address, args)
+
+    def _handle_patch_feedback(self, address: str, *args):
+        """Handle patch information feedback."""
+        logger.debug(f"Patch Feedback: {address} = {args}")
+        self._log_feedback('patch', address, args)
+
+    def _handle_dmx_feedback(self, address: str, *args):
+        """Handle DMX level feedback."""
+        # DMX feedback is very chatty, so only log at trace level
+        logger.log(5, f"DMX: {address} = {args}")  # TRACE level
+        # Don't log DMX to main feedback log - too much data
+
+    def _handle_playback_feedback(self, address: str, *args):
+        """Handle playback state feedback."""
+        logger.info(f"Playback: {address} = {args}")
+        self._log_feedback('playback', address, args)
+
     def _handle_eos_output(self, address: str, *args):
-        """Handle incoming OSC messages from Eos."""
+        """Handle incoming OSC messages from Eos (catch-all)."""
         logger.debug(f"Received OSC: {address} {args}")
+        self._log_feedback('other', address, args)
     
     def send_command(self, command_string: str) -> None:
         """
@@ -206,6 +298,69 @@ class EosOSCClient:
         self.client.send_message(osc_address, "ping")
         logger.debug("Sent ping")
     
+    def get_feedback_log(self, category: Optional[str] = None, limit: int = 100) -> List[Dict[str, Any]]:
+        """
+        Get recent feedback messages from Eos.
+
+        Args:
+            category: Filter by category (notify, error, event, etc.) or None for all
+            limit: Maximum number of messages to return (default: 100)
+
+        Returns:
+            List of feedback message dictionaries
+        """
+        if not self.enable_rx:
+            return []
+
+        messages = self.feedback_log
+
+        if category:
+            messages = [m for m in messages if m['category'] == category]
+
+        return messages[-limit:]
+
+    def get_operator_actions(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """
+        Get recent operator actions for behavior learning.
+
+        Args:
+            limit: Maximum number of actions to return (default: 50)
+
+        Returns:
+            List of operator action dictionaries
+        """
+        if not self.enable_rx:
+            return []
+
+        return self.operator_actions[-limit:]
+
+    def get_recent_errors(self, limit: int = 10) -> List[Dict[str, Any]]:
+        """
+        Get recent error messages - useful for learning what failed.
+
+        Args:
+            limit: Maximum number of errors to return (default: 10)
+
+        Returns:
+            List of error message dictionaries
+        """
+        return self.get_feedback_log(category='error', limit=limit)
+
+    def clear_feedback_log(self) -> None:
+        """Clear all stored feedback messages."""
+        if self.enable_rx:
+            self.feedback_log.clear()
+            self.operator_actions.clear()
+            logger.info("Feedback logs cleared")
+
+    def start_receiver(self) -> None:
+        """Start the OSC receiver server in a background thread."""
+        if self.server:
+            import threading
+            server_thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+            server_thread.start()
+            logger.info("OSC receiver thread started")
+
     def shutdown(self) -> None:
         """Clean shutdown of OSC client and server."""
         if self.server:

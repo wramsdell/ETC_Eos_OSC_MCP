@@ -9,7 +9,10 @@ MCP (Model Context Protocol) server for controlling ETC Eos family lighting cons
 - **Effects Programming**: Build and modify lighting effects
 - **Palette Management**: Create and update focus, color, beam, and intensity palettes
 - **Blind Programming**: Work on cues without affecting live output
-- **OSC Communication**: Real-time control via Open Sound Control protocol
+- **OSC Communication**: Real-time bidirectional control via Open Sound Control protocol
+- **Operator Learning**: Monitor and learn from operator behavior via OSC feedback
+- **Error Detection**: Track failed commands to understand what doesn't work
+- **Behavior Analysis**: Identify patterns, workflows, and timing from console activity
 
 ## Requirements
 
@@ -75,21 +78,31 @@ The server will connect to your Eos console via OSC and expose tools for control
 - `eos_apply_palette` - Apply palette to selection
 - `eos_delete_palette` - Remove a palette
 
-#### General Control
-- `eos_select_channels` - Select channels for operations
-- `eos_set_intensity` - Set channel intensity levels
-- `eos_go` - Execute GO button
-- `eos_back` - Execute BACK button
-- `eos_execute_macro` - Run a console macro
+#### Feedback & Learning (New!)
+- `eos_get_feedback_log` - Get recent OSC messages from console
+- `eos_get_recent_errors` - View failed commands and errors
+- `eos_get_operator_actions` - Watch what operators are doing
+- `eos_get_operator_insights` - Analyze behavior patterns and workflows
+- `eos_clear_feedback_log` - Reset learning history
+
+See [FEEDBACK_GUIDE.md](FEEDBACK_GUIDE.md) for detailed usage.
 
 ## Console Configuration
 
 ### Enable OSC on Eos Console
 
+**For sending commands TO the console:**
 1. Open Setup → Show Control → OSC
-2. Enable OSC RX (receive)
-3. Set OSC UDP RX Port (default: 3032)
+2. Enable **OSC RX** (receive)
+3. Set **OSC UDP RX Port** (default: 3032)
 4. Note the console's IP address
+
+**For receiving feedback FROM the console (optional but recommended):**
+5. Enable **OSC TX** (transmit)
+6. Set **OSC UDP TX Port** (default: 3033)
+7. Set **OSC UDP TX IP Address** to your MCP server's IP
+   - For local ETCnomad: `127.0.0.1`
+   - For network console: Your computer's IP
 
 ### Network Setup
 

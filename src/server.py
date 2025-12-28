@@ -28,6 +28,7 @@ from tools.patch import register_patch_tools
 from tools.cues import register_cue_tools
 from tools.effects import register_effect_tools
 from tools.palettes import register_palette_tools
+from tools.feedback import register_feedback_tools
 
 # Configure logging
 logging.basicConfig(
@@ -44,14 +45,19 @@ mcp = FastMCP("eos_mcp")
 eos_host = os.getenv("EOS_HOST", "192.168.1.100")
 eos_port = int(os.getenv("EOS_PORT", "3032"))
 eos_user = int(os.getenv("EOS_USER", "1"))
+eos_enable_rx = os.getenv("EOS_ENABLE_RX", "false").lower() in ("true", "1", "yes")
+eos_rx_port = int(os.getenv("EOS_RX_PORT", "3033"))
 
 logger.info(f"Initializing Eos OSC client: {eos_host}:{eos_port} (User {eos_user})")
+if eos_enable_rx:
+    logger.info(f"OSC feedback enabled - listening on port {eos_rx_port}")
 
 eos_client = EosOSCClient(
     host=eos_host,
     port=eos_port,
     user_id=eos_user,
-    enable_rx=False  # Set to True if you want to receive OSC feedback
+    enable_rx=eos_enable_rx,
+    rx_port=eos_rx_port
 )
 
 # Register all tool categories
@@ -69,9 +75,17 @@ logger.info("✓ Effect tools registered")
 register_palette_tools(mcp, eos_client)
 logger.info("✓ Palette tools registered")
 
+register_feedback_tools(mcp, eos_client)
+logger.info("✓ Feedback/learning tools registered")
+
+# Start OSC receiver if enabled
+if eos_client.enable_rx:
+    eos_client.start_receiver()
+    logger.info("✓ OSC receiver started")
+
 logger.info(f"ETC Eos MCP Server initialized successfully")
 logger.info(f"Connected to Eos console at {eos_host}:{eos_port}")
-# Tools successfully registered (14 total: 4 patch, 5 cue, 2 effect, 3 palette)
+# Tools successfully registered (19 total: 4 patch, 5 cue, 2 effect, 3 palette, 5 feedback)
 
 # Run the server
 if __name__ == "__main__":
